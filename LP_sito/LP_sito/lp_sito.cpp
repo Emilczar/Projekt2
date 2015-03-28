@@ -36,6 +36,7 @@ int main(){
 		if (reszta != 0){
 			#pragma omp critical
 			pierwsza[llpier++] = liczba; // zapamietanie liczby pierwszej
+			//printf("liczby: %d \n",liczba); // wypisanie licz pierwszych
 		}
 	}
 	czas = omp_get_wtime()- czas;
