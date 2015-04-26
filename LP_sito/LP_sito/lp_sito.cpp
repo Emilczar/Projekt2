@@ -1,45 +1,206 @@
+#include <iostream>
 #include<stdio.h>
 #include<math.h>
 #include<omp.h>
 #include<stdlib.h>
+#include <time.h>
+#include <windows.h>
 
-#define N 1000000 // zakres
-#define S 1000 // z braku pomys³u aby dzia³a³o sprt(N) wpisa³em recznie
-#define M N/10
 
-int main(){
-	long int a[S + 1]; // tablica pomocnicza
-	long int pierwsza[M]; // liczby pierwsze w przedziale 2..N
-	long int i, k,liczba,reszta;
-	long int lpodz; // liczba podzielnikow
-	long int llpier = 0; // liczba  liczb pieewszych
-	double czas;// zmiena do mierzenia czasu
+using namespace std;
 
-	czas = omp_get_wtime();
-	printf("start \n");
-#pragma omp parallel for shared(a)
+const int n = 1000000; // zakres
+int blok = 10;
+bool numbersTable[n + 1]; // tablica o indeksach od 0 do 100 | wszystkie false (czyli: 0);
+void rownolegle(){
+	//Global variables:
+	long int i = 0, j = 0;
+
+	double nSqrt = sqrt(n);
+
 	
-	for (i =2; i <= S; i++) a[i] = 1; // inicjowanie
-	for (i =2; i <= S; i++)
-	if (a[i] == 1){
-	pierwsza[llpier++] = i; //zapamietanie podzielnika
-	for (k = i + i; k <= S; k += i) a[k] = 0;
+#pragma omp parallel for shared(numbersTable)
+
+	for (int i = 2; i <= n; i++) // przeszukuj liczby od 2 do sqrt(n), 0 i 1 nie s¹ liczbami pierwszymi
+	{
+		if (numbersTable[i] == true) // je¿eli dana liczba jest ju¿ wykreœlona
+			continue; // to przejdŸ do kolejnej
+		for (int j = 2 * i; j <= n; j += i) // przejdŸ od liczby 2*i do n przesuwaj¹c siê o i
+			numbersTable[j] = true; // i ka¿d¹ z nich usuwaj ze zbioru
+
 	}
 
-	lpodz = llpier; //zapamietanie liczby podzielnikow
-#pragma omp parallel for  private(k, reszta) shared(llpier, lpodz, pierwsza)
-	for (liczba = S + 1; liczba <= N; liczba++){
-		for (k = 0; k < lpodz; k++) {
-			reszta = (liczba % pierwsza[k]);
-			if (reszta == 0) break;
-		}
-		if (reszta != 0){
-			#pragma omp critical
-			pierwsza[llpier++] = liczba; // zapamietanie liczby pierwszej
-			//printf("liczby: %d \n",liczba); // wypisanie licz pierwszych
-		}
+}
+void rownolegle_2W(){
+	omp_set_num_threads(2);
+	long int i = 0, j = 0;
+
+	double nSqrt = sqrt(n);
+
+
+#pragma omp parallel for shared(numbersTable)
+
+	for (int i = 2; i <= n; i++) // przeszukuj liczby od 2 do sqrt(n), 0 i 1 nie s¹ liczbami pierwszymi
+	{
+		if (numbersTable[i] == true) // je¿eli dana liczba jest ju¿ wykreœlona
+			continue; // to przejdŸ do kolejnej
+		for (int j = 2 * i; j <= n; j += i) // przejdŸ od liczby 2*i do n przesuwaj¹c siê o i
+			numbersTable[j] = true; // i ka¿d¹ z nich usuwaj ze zbioru
+
 	}
-	czas = omp_get_wtime()- czas;
-	printf("czas: %f sek \n", czas);
+
+}
+void rownolegle_S(){
+	//Global variables:
+	long int i = 0, j = 0;
+
+	double nSqrt = sqrt(n);
+
+
+#pragma omp parallel for shared(numbersTable) schedule(static , blok)
+
+	for (int i = 2; i <= n; i++) // przeszukuj liczby od 2 do sqrt(n), 0 i 1 nie s¹ liczbami pierwszymi
+	{
+		if (numbersTable[i] == true) // je¿eli dana liczba jest ju¿ wykreœlona
+			continue; // to przejdŸ do kolejnej
+		for (int j = 2 * i; j <= n; j += i) // przejdŸ od liczby 2*i do n przesuwaj¹c siê o i
+			numbersTable[j] = true; // i ka¿d¹ z nich usuwaj ze zbioru
+
+	}
+
+}
+void rownolegle_D(){
+	//Global variables:
+	long int i = 0, j = 0;
+
+	double nSqrt = sqrt(n);
+
+
+#pragma omp parallel for shared(numbersTable) schedule(dynamic, blok)
+
+	for (int i = 2; i <= n; i++) // przeszukuj liczby od 2 do sqrt(n), 0 i 1 nie s¹ liczbami pierwszymi
+	{
+		if (numbersTable[i] == true) // je¿eli dana liczba jest ju¿ wykreœlona
+			continue; // to przejdŸ do kolejnej
+		for (int j = 2 * i; j <= n; j += i) // przejdŸ od liczby 2*i do n przesuwaj¹c siê o i
+			numbersTable[j] = true; // i ka¿d¹ z nich usuwaj ze zbioru
+
+	}
+
+}
+void rownolegle_2P(){
+	//Global variables:
+	HANDLE thread_uchwyt = GetCurrentThread();
+	long int i = 0, j = 0;
+
+	double nSqrt = sqrt(n);
+	int th_id = omp_get_thread_num();
+	DWORD_PTR mask = (1 << (th_id % 2));
+	DWORD_PTR result = SetThreadAffinityMask(thread_uchwyt, mask);
+	if (result == 0) printf("blad SetThreadAffnityMask \n");
+
+#pragma omp parallel for shared(numbersTable)
+
+	for (int i = 2; i <= n; i++) // przeszukuj liczby od 2 do sqrt(n), 0 i 1 nie s¹ liczbami pierwszymi
+	{
+		if (numbersTable[i] == true) // je¿eli dana liczba jest ju¿ wykreœlona
+			continue; // to przejdŸ do kolejnej
+		for (int j = 2 * i; j <= n; j += i) // przejdŸ od liczby 2*i do n przesuwaj¹c siê o i
+			numbersTable[j] = true; // i ka¿d¹ z nich usuwaj ze zbioru
+
+	}
+
+}
+void rownolegle_2P_S(){
+	//Global variables:
+	HANDLE thread_uchwyt = GetCurrentThread();
+	long int i = 0, j = 0;
+
+	double nSqrt = sqrt(n);
+	int th_id = omp_get_thread_num();
+	DWORD_PTR mask = (1 << (th_id % 2));
+	DWORD_PTR result = SetThreadAffinityMask(thread_uchwyt, mask);
+	if (result == 0) printf("blad SetThreadAffnityMask \n");
+
+#pragma omp parallel for shared(numbersTable) schedule(static , blok)
+
+	for (int i = 2; i <= n; i++) // przeszukuj liczby od 2 do sqrt(n), 0 i 1 nie s¹ liczbami pierwszymi
+	{
+		if (numbersTable[i] == true) // je¿eli dana liczba jest ju¿ wykreœlona
+			continue; // to przejdŸ do kolejnej
+		for (int j = 2 * i; j <= n; j += i) // przejdŸ od liczby 2*i do n przesuwaj¹c siê o i
+			numbersTable[j] = true; // i ka¿d¹ z nich usuwaj ze zbioru
+
+	}
+
+}
+void rownolegle_2P_D(){
+	//Global variables:
+	HANDLE thread_uchwyt = GetCurrentThread();
+	long int i = 0, j = 0;
+
+	double nSqrt = sqrt(n);
+	int th_id = omp_get_thread_num();
+	DWORD_PTR mask = (1 << (th_id % 2));
+	DWORD_PTR result = SetThreadAffinityMask(thread_uchwyt, mask);
+	if (result == 0) printf("blad SetThreadAffnityMask \n");
+
+#pragma omp parallel for shared(numbersTable) schedule(dynamic, blok)
+
+	for (int i = 2; i <= n; i++) // przeszukuj liczby od 2 do sqrt(n), 0 i 1 nie s¹ liczbami pierwszymi
+	{
+		if (numbersTable[i] == true) // je¿eli dana liczba jest ju¿ wykreœlona
+			continue; // to przejdŸ do kolejnej
+		for (int j = 2 * i; j <= n; j += i) // przejdŸ od liczby 2*i do n przesuwaj¹c siê o i
+			numbersTable[j] = true; // i ka¿d¹ z nich usuwaj ze zbioru
+
+	}
+
+}
+int main()
+{
+	clock_t start, stop;
+	
+	start = clock();
+	rownolegle();
+	stop = clock();
+	printf("PR %f sekund\n", ((double)(stop - start) / 1000.0));
+
+	start = clock();
+	rownolegle_2W();
+	stop = clock();
+	printf("2W %f sekund\n", ((double)(stop - start) / 1000.0));
+
+	start = clock();
+	rownolegle_S();
+	stop = clock();
+	printf("S %f sekund\n", ((double)(stop - start) / 1000.0));
+
+
+	start = clock();
+	rownolegle_D();
+	stop = clock();
+	printf("D  %f sekund\n", ((double)(stop - start) / 1000.0));
+	
+	
+	start = clock();
+	rownolegle_2P();
+	stop = clock();
+	printf("2P %f sekund\n", ((double)(stop - start) / 1000.0));
+
+	start = clock();
+	rownolegle_2P_S();
+	stop = clock();
+	printf("2P_S %f sekund\n", ((double)(stop - start) / 1000.0));
+
+	start = clock();
+	rownolegle_2P_D();
+	stop = clock();
+	printf("2P_D %f sekund\n", ((double)(stop - start) / 1000.0));
+	// Print primes
+
+	/*for (i = 2; i <= n; i++)
+	if (numbersTable[i] == false)
+	cout << i << endl; */
 	return 0;
 }
